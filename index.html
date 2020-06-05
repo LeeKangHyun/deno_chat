@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Deno Chat app</title>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { html, render, useEffect, useState } from 'https://unpkg.com/htm/preact/standalone.module.js'
+
+    let ws;
+
+    function Chat() {
+      const [messages, setMessages] = useState([]);
+      const [msg, setMsg] = useState('');
+
+      const onReceiveMessage = ({ data }) => setMessages(m => ([...m, data]));
+      const onSendMessage = e => {
+        e.preventDefault();
+        if (msg === '') return;
+
+        ws.send(msg);
+        setMsg('');
+      }
+      const onChangeMessage = e => {
+        const { value } = e.currentTarget;
+        setMsg(value);
+      }
+
+      useEffect(() => {
+        if (ws) ws.close();
+        ws = new WebSocket(`ws://${window.location.host}/ws`);
+        ws.addEventListener('message', onReceiveMessage);
+
+        return () => ws.removeEventListener('message', onReceiveMessage);
+      }, []);
+
+      return html`
+        ${messages.map(message => html`
+          <div>${message}</div>
+        `)}
+
+        <form onSubmit=${onSendMessage}>
+          <input type="text" value=${msg} onChange=${onChangeMessage} />
+          <button>Send</button>
+        </form>
+      `
+    }
+
+    render(html`<${Chat} />`, document.getElementById('app'));
+  </script>
+</body>
+</html>
